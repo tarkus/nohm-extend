@@ -36,6 +36,7 @@ describe 'Nohm model should be extended', ->
   it 'when it was extended by a subclass of nohm-extend', (done) ->
     instance = Nohm.factory 'InheritedExtendedModel'
     instance.should.be.an.instanceof Nohm
+    InheritedExtendedModel.should.have.an.property 'count'
     InheritedExtendedModel.should.have.an.property 'dummy'
     instance.should.have.an.property 'saveMyDay'
     done()

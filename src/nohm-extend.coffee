@@ -3,16 +3,24 @@
 class NohmExtend extends Nohm
 
   @model: (name, options) ->
-    options.methods = {} unless options.methods?
-    options.extends = {} unless options.extends?
-    for k, v of @methods
-      options.methods[k] = v unless options.methods[k]?
+    options.methods ?= {}
+    options.extends ?= {}
+
+    @methods[k] = v for k, v of @_methods
+    @methods[k] = v for k, v of options.methods
+    options.methods = @methods
+
+    @extends[k] = v for k, v of @_extends
+    @extends[k] = v for k, v of options.extends
+
     model = Nohm.model(name, options)
     model[k] = v for k, v of @extends
-    model[k] = v for k, v of options.extends
     model
 
-  @extends:
+  @extends: {}
+  @methods: {}
+
+  @_extends:
     get: (criteria, callback) ->
         this.find criteria, (err, ids) ->
           return callback(err) if err
@@ -85,7 +93,7 @@ class NohmExtend extends Nohm
         result.reverse() if _criteria.direction is "DESC"
         callback null, result[..._criteria.amount]
 
-  @methods:
+  @_methods:
     save: (cb) ->
       _cb = (err) =>
         cb?.call(this, err)
