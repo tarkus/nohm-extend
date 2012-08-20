@@ -1,6 +1,6 @@
 {
   "name": "nohm-extend",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "provide a way to extend nohm models",
   "main": "lib/nohm-extend.js",
   "scripts": {
