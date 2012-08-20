@@ -1,4 +1,8 @@
-nohm-extend
-===========
+Nohm-extend provide a way to extend [nohm](https://github.com/maritz/nohm) models
 
-Add more factory methods and instance methods to Nohm models
+With nohm-extend you can 
+* Add class methods to models
+* Add instance methods
+
+
+

@@ -1,0 +1,28 @@
+{
+  "name": "nohm-extend",
+  "version": "0.1.0",
+  "description": "provide a way to extend nohm models",
+  "main": "lib/nohm-extend.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/tarkus/nohm-extend.git"
+  },
+  "dependencies": {
+    "nohm": "*"
+  },
+  "devDependencies": {
+    "coffee-script": "*",
+    "redis": "*",
+    "should": "*",
+    "mocha": "*"
+  },
+  "keywords": [
+    "nohm",
+    "redis"
+  ],
+  "author": "Tarkus Liu <tarkus.nnkh@gmail.com>",
+  "license": "BSD"
+}
