@@ -1,6 +1,12 @@
-{Nohm} = require 'nohm'
+if module.parent?
+  {Nohm} = module.parent.require 'nohm'
+else
+  {Nohm} = require "nohm"
 
 class NohmExtend extends Nohm
+
+  @extends: {}
+  @methods: {}
 
   @model: (name, options) ->
     options.methods ?= {}
@@ -17,29 +23,26 @@ class NohmExtend extends Nohm
     model[k] = v for k, v of @extends
     model
 
-  @extends: {}
-  @methods: {}
-
   @_extends:
     get: (criteria, callback) ->
-        this.find criteria, (err, ids) ->
+        @find criteria, (err, ids) ->
           return callback(err) if err
           if ids.length is 1
-            this.load ids[0], (err) ->
+            @load ids[0], (err) ->
               return callback(err) if err
-              callback(null, this.allProperties())
+              callback(null, @allProperties())
           else
-            Nohm.loadSome.call(this, [ids, callback])
+            @loadSome.call(@, [ids, callback])
 
     loadSome: (ids, callback) ->
-      return callback(null, ids) if ids.length is 0
+      return callback(null, []) if ids.length is 0
       rows = []
       count = 0
       total = ids.length
       for id in ids
-        this.load id, (err) ->
+        @load parseInt(id), (err, props) ->
           return callback(err) if err
-          rows.push this.allProperties()
+          rows.push @allProperties()
           count++
           callback(null, rows) if count is total
 
@@ -52,7 +55,7 @@ class NohmExtend extends Nohm
           return callback err if err
           return callback null, result
 
-      this.find criteria, (err, ids) ->
+      @find criteria, (err, ids) ->
         return callback err if err
         return callback null, ids.length
       
@@ -69,7 +72,7 @@ class NohmExtend extends Nohm
       return callback 'invalid params' if m.length != 3
       op = m[1]
       value = m[2].toString()
-      this.find (err, ids) ->
+      @find (err, ids) ->
         return callback err if err
         max = ids.length - 1
         idx = ids.indexOf value
@@ -96,11 +99,11 @@ class NohmExtend extends Nohm
   @_methods:
     save: (cb) ->
       _cb = (err) =>
-        cb?.call(this, err)
-      this._super_save.call(this, _cb)
+        cb?.call(@, err)
+      @_super_save.call(@, _cb)
       
     allProperties: (stringify) ->
-      props = this._super_allProperties.call(this)
+      props = @_super_allProperties.call(@)
       props.id = parseInt(props.id) if props.id?
       return if stringify? then JSON.stringify props else props
 

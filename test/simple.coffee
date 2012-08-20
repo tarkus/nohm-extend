@@ -1,6 +1,6 @@
 should = require 'should'
 {Nohm} = require 'nohm'
-NohmExtend = require '../lib/nohm-extend'
+NohmExtend = require('../lib/nohm-extend')
 MyNohm = require './mynohm'
 redisClient = require('redis').createClient()
 
@@ -9,6 +9,7 @@ ExtendedModel = NohmExtend.model 'ExtendedModel',
   properties:
     name:
       type: 'string'
+      index: true
 
   client: redisClient
 
@@ -22,16 +23,18 @@ InheritedExtendedModel = MyNohm.model 'InheritedExtendedModel',
   client: redisClient
 
 
-
 describe 'Nohm model should be extended', ->
 
   it 'when it was extended by nohm-extend', (done) ->
-    #instance = Nohm.factory 'ExtendedModel'
     instance = new ExtendedModel
     instance.should.be.an.instanceof Nohm
     ExtendedModel.should.have.property 'count'
     ExtendedModel.should.have.property 'loadSome'
-    done()
+    ExtendedModel.loadSome [1], (err, instances) ->
+      err.should.eql 'not found'
+      ExtendedModel.sort field: 'name', (err, ids) ->
+        ids.should.eql []
+        done()
 
   it 'when it was extended by a subclass of nohm-extend', (done) ->
     instance = Nohm.factory 'InheritedExtendedModel'

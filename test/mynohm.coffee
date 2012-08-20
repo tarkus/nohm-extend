@@ -1,4 +1,5 @@
-NohmExtend = require '../lib/nohm-extend'
+{Nohm} = require 'nohm'
+NohmExtend = require('../lib/nohm-extend')
 
 class MyNohm extends NohmExtend
 
