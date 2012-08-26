@@ -12,10 +12,12 @@ class NohmExtend extends Nohm
     options.methods ?= {}
     options.extends ?= {}
 
+    @_methods[k] = v for k, v of @methods
     @methods[k] = v for k, v of @_methods
     @methods[k] = v for k, v of options.methods
     options.methods = @methods
 
+    @_extends[k] = v for k, v of @extends
     @extends[k] = v for k, v of @_extends
     @extends[k] = v for k, v of options.extends
 
