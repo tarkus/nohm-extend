@@ -150,7 +150,7 @@ class NohmExtend extends Nohm
               return callback.call model, err, affected_rows unless undefined_properties.length > 0
               multi.exec (err, results) ->
                 console.log "Cleaned up undefined properties #{undefined_properties.join(', ')}"
-              @unindex undefined_properties, callback
+              @deindex undefined_properties, callback
 
 
   @_methods: null
