@@ -3,40 +3,38 @@ if module.parent?
 else
   {Nohm} = require "nohm"
 
-class NohmExtend extends Nohm
+extend = (dest, objs...) ->
+  for obj in objs
+    dest[k] = v for k, v of obj
+  dest
 
-  @extends: {}
-  @methods: {}
+class NohmExtend extends Nohm
 
   @model: (name, options) ->
     options.methods ?= {}
     options.extends ?= {}
 
-    @_methods[k] = v for k, v of @methods
-    @methods[k] = v for k, v of @_methods
-    @methods[k] = v for k, v of options.methods
-    options.methods = @methods
-
-    @_extends[k] = v for k, v of @extends
-    @extends[k] = v for k, v of @_extends
-    @extends[k] = v for k, v of options.extends
+    options.methods = extend options.methods, @_methods
 
     model = Nohm.model(name, options)
-    model[k] = v for k, v of @extends
+    model = extend model, @_extends, options.extends
+    model.modelName = name
     model
 
   @_extends:
-    get: (criteria, callback) ->
-        @find criteria, (err, ids) ->
-          return callback(err) if err
-          if ids.length is 1
-            @load ids[0], (err) ->
-              return callback(err) if err
-              callback(null, @allProperties())
-          else
-            @loadSome.call(@, [ids, callback])
 
-    loadSome: (ids, callback) ->
+    getClient: -> Nohm.client
+    getHashKey: (id) -> "#{Nohm.prefix.hash}#{@modelName}:#{id}"
+
+    get: (criteria, callback) ->
+      @findAndLoad criteria, (err, objs) ->
+        return callback(err) if err
+        if objs.length is 1
+          callback.call(objs[0], null, objs[0].allProperties())
+        else
+          callback.call(null, objs)
+
+    ids: (ids, callback) ->
       return callback(null, []) if ids.length is 0
       rows = []
       count = 0
@@ -60,53 +58,102 @@ class NohmExtend extends Nohm
       @find criteria, (err, ids) ->
         return callback err if err
         return callback null, ids.length
-      
-    ids: (criteria, callback) ->
-      ids = []
-      _criteria =
-        search: ''
-        direction: 'DESC'
-        amount: 30
-      if typeof criteria is "string"
-        criteria = search: criteria
-      _criteria extends criteria
-      m = _criteria.search.match /([<|>|=]=?)\s*(\d+)/
-      return callback 'invalid params' if m.length != 3
-      op = m[1]
-      value = m[2].toString()
-      @find (err, ids) ->
-        return callback err if err
-        max = ids.length - 1
-        idx = ids.indexOf value
-        return callback 'not found' if idx is -1
-        if op[0] is '>'
-          if op[1]? and op[1] is '='
-            start = Math.min max, idx
-          else
-            start = Math.min max, idx + 1
-          return callback null, [] if start == max
-          result = ids[start..]
 
-        if op[0] is '<'
-          if op[1]? and op[1] is '='
-            stop = Math.max max, idx
-          else
-            stop = Math.max 0, idx - 1
-          return callback null, [] if stop == 0
-          result = ids[..stop]
+    index: (property, callback) ->
+      if typeof property is "function"
+        callback = property
+        property = null
+      model = @
+      conn = Nohm.client
+      affected_rows = 0
+      @find (err, ids) =>
+        return callback.call model, err, affected_rows if err or ids.length < 1
+        ids.forEach (id, idx) =>
+          @load id, (err, props) ->
+            console.log @errors if err
+            if property
+              @properties[property].__updated = true
+            else
+              for p, def of @properties when def.index or def.unique
+                @properties[p].__updated = true
+                if @__inDB
+                  propLower = if @properties[p].type is 'string' \
+                    then @properties[p].__oldValue.toLowerCase() \
+                    else @properties[p].__oldValue
+                  conn.del "#{Nohm.prefix.unique}#{@modelName}:#{p}:#{propLower}", Nohm.logError
+            @save (err) ->
+              console.log @errors if err
+              console.log "Indexed #{@modelName} on '#{property or 'all indexed properties'}' for row id #{@id}"
+              affected_rows += 1
+              callback.call model, err, affected_rows if idx is ids.length - 1
 
-        result.reverse() if _criteria.direction is "DESC"
-        callback null, result[..._criteria.amount]
+    deindex: (properties, callback) ->
+      model = @
+      multi = Nohm.client.multi()
+      deletes = []
+      if typeof properties is 'function'
+        callback = properties
+        properties = null
+      properties = [properties] if typeof properties is 'string'
+      unless properties
+        ins = new model
+        properties = []
+        for p, def of ins.properties when def.index or def.unique
+          properties.push p
 
-  @_methods:
-    save: (cb) ->
-      _cb = (err) =>
-        cb?.call(@, err)
-      @_super_save.call(@, _cb)
-      
-    allProperties: (stringify) ->
-      props = @_super_allProperties.call(@)
-      props.id = parseInt(props.id) if props.id?
-      return if stringify? then JSON.stringify props else props
+      properties.forEach (p, idx) =>
+        Nohm.client.keys "#{Nohm.prefix.unique}#{@modelName}:#{p}:*", (err, unique_keys) =>
+          deletes = unique_keys
+          Nohm.client.keys "#{Nohm.prefix.index}#{@modelName}:#{p}:*", (err, index_keys) =>
+            deletes = deletes.concat index_keys
+            Nohm.client.keys "#{Nohm.prefix.scoredindex}#{@modelName}:#{p}:*", (err, scoredindex_keys) =>
+              deletes = deletes.concat scoredindex_keys
+
+              if idx is properties.length - 1
+                multi.del deletes if deletes.length > 0
+                multi.exec (err, results) =>
+                  console.log "Deleted #{deletes.length} related keys for '#{properties.join(', ')}' of #{@modelName}"
+                  return callback.call model, err, deletes.length
+
+
+    clean: (callback) ->
+      model = new @
+      multi = Nohm.client.multi()
+      deletes = []
+      affected_rows = 0
+      undefined_properties = []
+      @find (err, ids) =>
+        return callback.call @, err, affected_rows if err or ids.length < 1
+        ids.forEach (id, idx) =>
+          @getClient().hgetall @getHashKey(id), (err, values) =>
+            keys = if values then Object.keys(values) else []
+            err = 'not found' unless Array.isArray(keys) and keys.length > 0 and not err
+
+            if err
+              Nohm.logError "loading a hash produced an error: #{err}"
+              return callback?.call @, err
+
+            # Delete unused properties
+            for p of values
+              is_enumerable = values.hasOwnProperty(p)
+              is_meta = p is '__meta_version'
+              is_property = model.properties.hasOwnProperty(p)
+              if not is_meta and not model.properties.hasOwnProperty(p)
+                affected_rows += 1
+                if undefined_properties.indexOf(p) is -1
+                  Nohm.logError "Undefined property '#{p}' found, will be deleted"
+                  undefined_properties.push p
+                multi.hdel @getHashKey(id), p
+
+            # Delete unused index keys
+            if idx is ids.length - 1
+              return callback.call model, err, affected_rows unless undefined_properties.length > 0
+              multi.exec (err, results) ->
+                console.log "Cleaned up undefined properties #{undefined_properties.join(', ')}"
+              @unindex undefined_properties, callback
+
+
+  @_methods: null
+
 
 module.exports = NohmExtend
