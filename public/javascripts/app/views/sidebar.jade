@@ -1,0 +1,11 @@
+.navbar-default.navbar-static-side
+  .sidebar-collapse
+    ul#side-menu.nav
+      - for count, name in models
+        li
+          a(href="#/schema/#{name}") #{name}
+          a(href="#/records/#{name}") 
+            .label.label-default #{count}
+
+
+

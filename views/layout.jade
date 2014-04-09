@@ -1,0 +1,45 @@
+doctype html
+//if lt IE 7
+  <html class="lt-ie9 lt-ie8 lt-ie7">
+//if IE 7
+  <html class="lt-ie9 lt-ie8">
+//if IE 8
+  <html class="lt-ie9">
+// [if gt IE 8] <!
+html
+  // <![endif]
+  head
+    meta(charset='utf-8')
+    meta(name='description', content='')
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title #{title}
+    - css.root = '/stylesheets'
+    - js.root  = '/javascripts'
+
+    != css("application")
+    != js("application")
+
+    script(src="#{templates.app.all.src}")
+    //- script(src="#{base_uri}/components/allmixedup/socket.io.js")
+    //- script(src="#{base_uri}/socket.io/socket.io.js")
+    script(src="#{base_uri}/components/allmixedup/moment.min.js")
+
+    link(rel="stylesheet" href="#{base_uri}/stylesheets/font-awesome.css")
+
+  body(id="nohm-backend")
+    #wrapper
+
+  script(src="#{base_uri}/validator.js")
+
+
+  script.
+    var base_uri = "#{base_uri}";
+
+  script
+    :coffee
+      if io?
+        io.connect "http://localhost:18000#{base_url}"
+
+  script.
+    var models = {models};
+    var stats = {stats};
