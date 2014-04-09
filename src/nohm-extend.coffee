@@ -226,9 +226,20 @@ class NohmExtend extends Nohm
 
     app.get "/schema/:name", (req, res) ->
       return res.status 404 unless req.params.name
-      schema = NohmExtend.getModels()[req.params.name]['properties']
-      console.log schema
-      res.send JSON.stringify schema
+      schema = {}
+      model = NohmExtend.getModels()[req.params.name]
+      ins = new model
+      for name, def of ins.properties
+        def.type = def.type.toString() if typeof def.type is "function"
+        def.defaultValue = def.defaultValue.toString() if typeof def.defaultValue is "function"
+
+        schema[name] =
+          type: def.type
+          index: def.index
+          unique: def.unique
+          default: def.defaultValue
+
+      res.send JSON.stringify name: req.params.name, schema: schema
 
     app.get "/record/:model/page/:page", (req, res) ->
       return res.status 404 unless req.params.model

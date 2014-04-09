@@ -9,10 +9,13 @@ class Schema extends Spine.Controller
   active: (name) ->
     SchemaModel.fetch url: "#{base_uri}/schema/#{name}"
 
-  create: =>
+  create: (schema) =>
+    @schema = schema
+    @render()
+    console.log 'hi'
 
   render: =>
-    @replace @template("schema")()
+    @replace @template("schema") schema: @schema
     @
 
 
