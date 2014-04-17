@@ -27,18 +27,17 @@ class Record extends Nohm
 
   @configure: (options) ->
     assert options.redis, "Set redis client first"
-    assert options.models, "Set model directory"
 
-    options.redis.on 'connect', ->
+    options.redis.on 'connect', =>
       
       ###
       if options.models.charAt(0) isnt "/"
         model.parent
       ###
       
-      require_tree options.models
+      require_tree options.models if options.models
 
-      @setClient redis
+      @setClient options.redis
       @setPrefix options.prefix
       options.connect?.call @
 
@@ -50,10 +49,10 @@ class Record extends Nohm
 
     model = Nohm.model(name, options)
     model = extend model, @_extends, options.extends
-    model::modelName = name
+    model.modelName = name
     model.keepalive = new Date().getTime()
 
-    # Let's welcome the view and level
+    # Collections!
     model.collectionDefinition = options.properties.collections or null
 
     if model.collectionDefinition
@@ -70,21 +69,22 @@ class Record extends Nohm
         collection::modelName = name
         Record.collections[name] = collection
 
-    orig = model::find
-    model::find = (searches, callback) ->
+    orig = model.find
+    model.find = (searches, callback) ->
       if @getClient().shardable \
         and searches and typeof(searches) isnt 'function' \
         and Object.keys(searches).length > 1
-          return @logError "cannot search more one criteria with redism"
-      orig.applay @, arguments
+          return throw new Error "cannot search more one criteria with redism"
+      orig.apply @, arguments
 
-    orig = model::sort
-    model::sort = (options, ids) ->
+    orig = model.sort
+    model.sort = (options, ids) ->
+      ins = new @
       if @getClient().shardable
-        field_type = @properties[options.field].type
-        scored = Nohm.indexNumberTypes.indexOf(field_type) != -1
-        return @logError "cannot sort on non-numeric fields with redism" unless scored
-      orig.applay @, arguments
+        field_type = ins.properties[options.field].type
+        scored = Record.indexNumberTypes.indexOf(field_type) != -1
+        return throw new Error "cannot sort on non-numeric fields with redism" unless scored
+      orig.apply @, arguments
 
     model
 
@@ -102,9 +102,9 @@ class Record extends Nohm
         @collections[name] = view
       collection
 
-    getClient: -> Nohm.client
+    getClient: -> Record.client
 
-    getHashKey: (id) -> "#{Nohm.prefix.hash}#{@modelName}:#{id}"
+    getHashKey: (id) -> "#{Record.prefix.hash}#{@modelName}:#{id}"
 
     get: (criteria, callback) ->
       @findAndLoad criteria, (err, objs) ->
@@ -131,7 +131,7 @@ class Record extends Nohm
         callback = criteria
         criteria = null
         m = new this
-        return Nohm.client.scard Nohm.prefix.idsets + m.modelName, (err, result) ->
+        return Record.client.scard Record.prefix.idsets + m.modelName, (err, result) ->
           return callback err if err
           return callback null, result
 
@@ -145,7 +145,7 @@ class Record extends Nohm
         property = null
 
       model = @
-      multi = Nohm.client.multi()
+      multi = Record.client.multi()
       affected_rows = 0
       old_unique = []
       new_unique = []
@@ -159,7 +159,7 @@ class Record extends Nohm
                 propLower = if @properties[prop].type is 'string' \
                   then @properties[prop].__oldValue.toLowerCase() \
                   else @properties[prop].__oldValue
-                multi.setnx "#{Nohm.prefix.unique}#{@modelName}:#{prop}:#{@properties[prop].value}", id
+                multi.setnx "#{Record.prefix.unique}#{@modelName}:#{prop}:#{@properties[prop].value}", id
               else
                 @properties[prop].__updated = true
 
@@ -178,7 +178,7 @@ class Record extends Nohm
 
     deindex: (properties, callback) ->
       model = @
-      multi = Nohm.client.multi()
+      multi = Record.client.multi()
       deletes = []
       if typeof properties is 'function'
         callback = properties
@@ -191,11 +191,11 @@ class Record extends Nohm
           properties.push p
 
       properties.forEach (p, idx) =>
-        Nohm.client.keys "#{Nohm.prefix.unique}#{@modelName}:#{p}:*", (err, unique_keys) =>
+        Record.client.keys "#{Record.prefix.unique}#{@modelName}:#{p}:*", (err, unique_keys) =>
           deletes = unique_keys
-          Nohm.client.keys "#{Nohm.prefix.index}#{@modelName}:#{p}:*", (err, index_keys) =>
+          Record.client.keys "#{Record.prefix.index}#{@modelName}:#{p}:*", (err, index_keys) =>
             deletes = deletes.concat index_keys
-            Nohm.client.keys "#{Nohm.prefix.scoredindex}#{@modelName}:#{p}:*", (err, scoredindex_keys) =>
+            Record.client.keys "#{Record.prefix.scoredindex}#{@modelName}:#{p}:*", (err, scoredindex_keys) =>
               deletes = deletes.concat scoredindex_keys
 
               if idx is properties.length - 1
@@ -207,7 +207,7 @@ class Record extends Nohm
 
     clean: (callback) ->
       model = new @
-      multi = Nohm.client.multi()
+      multi = Record.client.multi()
       deletes = []
       affected_rows = 0
       undefined_properties = []
@@ -219,7 +219,7 @@ class Record extends Nohm
             err = 'not found' unless Array.isArray(keys) and keys.length > 0 and not err
 
             if err
-              Nohm.logError "loading a hash produced an error: #{err}"
+              Record.logError "loading a hash produced an error: #{err}"
               return callback?.call @, err
 
             # Delete unused properties
@@ -230,7 +230,7 @@ class Record extends Nohm
               if not is_meta and not model.properties.hasOwnProperty(p)
                 affected_rows += 1
                 if undefined_properties.indexOf(p) is -1
-                  Nohm.logError "Undefined property '#{p}' found, will be deleted"
+                  Record.logError "Undefined property '#{p}' found, will be deleted"
                   undefined_properties.push p
                 multi.hdel @getHashKey(id), p
 
@@ -253,10 +253,10 @@ class Record extends Nohm
 
       app = express()
 
-      app.locals.title = "Nohm Backend"
+      app.locals.title = "Record Backend"
 
       StatsHandler = (req, res, next) ->
-        Nohm.client.info (err, result) ->
+        Record.client.info (err, result) ->
           res.locals.stats = result unless err
           next err
 
