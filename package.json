@@ -26,6 +26,7 @@
   "devDependencies": {
     "coffee-script": "*",
     "redis": "*",
+    "redism": "*",
     "should": "*",
     "mocha": "*"
   },

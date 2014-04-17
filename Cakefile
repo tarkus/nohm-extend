@@ -4,7 +4,7 @@ fs = require 'fs'
 {spawn} = require 'child_process'
 
 build = (callback) ->
-  coffee = spawn 'coffee', ['-c', '-o', 'lib', 'src']
+  coffee = spawn 'coffee', ['-c', '-o', '.', 'src']
   coffee.stderr.on 'data', (data) ->
     process.stderr.write data.toString()
   coffee.stdout.on 'data', (data) ->
@@ -16,7 +16,7 @@ task 'build', 'Build lib/ from src/', ->
   build()
 
 task 'watch', 'Watch src/ for changes', ->
-  coffee = spawn 'coffee', ['-w', '-c', '-o', 'lib', 'src']
+  coffee = spawn 'coffee', ['-w', '-c', '-o', '.', 'src']
   coffee.stderr.on 'data', (data) ->
     process.stderr.write data.toString()
   coffee.stdout.on 'data', (data) ->

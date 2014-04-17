@@ -21,8 +21,7 @@ setTimeout recycle_views, VIEW_RECYCLE_INTERVAL
 
 class Record extends Nohm
 
-  @views: {}
-  @levels: {}
+  @collections: {}
 
   @getModel: (name) -> @getModels()[name]
 
@@ -55,22 +54,21 @@ class Record extends Nohm
     model.keepalive = new Date().getTime()
 
     # Let's welcome the view and level
-    model.viewDefinition = options.properties.view or null
-    model.levelDefinition = options.properties.levels or null
+    model.collectionDefinition = options.properties.collections or null
 
-    if model.levelDefinition
-      if Array.isArray model.levelDefinition
-        levels = model.levelDefinition
-      else if typeof model.levelDefinition is 'object'
-        levels = Object.keys model.levelDefinition
+    if model.collectionDefinition
+      if Array.isArray model.collectionDefinition
+        collection = model.collectionDefinition
+      else if typeof model.collectionDefinition is 'object'
+        collection = Object.keys model.collectionDefinition
       else
-        throw new Error "wrong type of level definition"
+        throw new Error "wrong type of collection definition"
 
-      levels.forEach (lv) ->
-        modelName = "#{name}:level:#{lv}"
-        level = extend {}, model
-        level::modelName = modelName
-        Record.levels[modelName] = level
+      collection.forEach (col) ->
+        name = "#{name}:collection:#{col}"
+        collection = extend {}, model
+        collection::modelName = name
+        Record.collections[name] = collection
 
     orig = model::find
     model::find = (searches, callback) ->
@@ -94,25 +92,15 @@ class Record extends Nohm
 
   @_extends:
 
-    level: (lv) ->
-      return @logError "No level definition found" unless @levelDefinition?
-      modelName = "#{@modelName}:level:#{id}"
-      level = @levels[modelName]
-      unless level
-        level = extend {}, @
-        level::modelName = modelName
-        @levels[modelName] = level
-      level
-
-    view: (id) ->
-      return @logError "No view definition found" unless @viewDefinition?
-      modelName = "#{@modelName}:view:#{id}"
-      view = @views[modelName]
-      unless view
-        view = extend {}, @
-        view::modelName = modelName
-        @views[modelName] = view
-      view
+    collection: (id) ->
+      return @logError "No collection definition found" unless @collectionDefinition?
+      name = "#{@modelName}:collection:#{id}"
+      collection = @collections[name]
+      unless collection
+        collection = extend {}, @
+        collection::modelName = name
+        @collections[name] = view
+      collection
 
     getClient: -> Nohm.client
 
