@@ -1,26 +1,27 @@
 {
-  "name": "nohm-extend",
-  "version": "0.4.1",
-  "description": "provide a way to extend nohm models",
-  "main": "lib/nohm-extend.js",
+  "name": "record-orm",
+  "version": "0.4.2",
+  "description": "A simple redis orm based on Nohm",
+  "main": "lib/record.js",
   "scripts": {
     "test": "mocha",
     "postinstall": "node_modules/bower/bin/bower install --allow-root"
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/tarkus/nohm-extend.git"
+    "url": "git://github.com/tarkus/record-orm.git"
   },
   "dependencies": {
-    "nohm": "*",
-    "fuyun-template": "git+ssh://bitbucket.org/tarkus/fuyun-template.git",
-    "jade": "~1.3.0",
-    "stylus": "~0.42.3",
-    "connect-assets": "~2.x.x",
     "bower": "~1.3.1",
-    "express": "~3.5.1",
     "coffee-script": "~1.7.1",
-    "socket.io": "~1.0.0"
+    "connect-assets": "~2.x.x",
+    "express": "~4.0.0",
+    "fuyun-template": "~0.1.2",
+    "jade": "~1.3.0",
+    "nohm": "*",
+    "require_tree": "^0.6.8",
+    "socket.io": "~1.0.0",
+    "stylus": "~0.42.3"
   },
   "devDependencies": {
     "coffee-script": "*",

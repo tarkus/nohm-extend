@@ -1,0 +1,29 @@
+{
+  "name": "active_spine",
+  "version": "0.1.1",
+  "homepage": "https://github.com/tarkus/active_spine",
+  "authors": [
+    "Tarkus Liu <tarkus.nnkh@gmail.com>"
+  ],
+  "keywords": [
+    "spine",
+    "coffee"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "_release": "0.1.1",
+  "_resolution": {
+    "type": "version",
+    "tag": "0.1.1",
+    "commit": "13752dc37327326c20d55fa1d09af544bb14bd8a"
+  },
+  "_source": "git://github.com/tarkus/active_spine.git",
+  "_target": "~0.1.0",
+  "_originalSource": "active_spine"
+}
