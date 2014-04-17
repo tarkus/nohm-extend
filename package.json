@@ -1,6 +1,6 @@
 {
   "name": "record-orm",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "A simple redis orm based on Nohm",
   "main": "lib/record.js",
   "scripts": {
